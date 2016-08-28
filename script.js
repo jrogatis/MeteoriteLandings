@@ -16,7 +16,7 @@ const {
 	scaleTime,
 	timeFormat,
 	timeParse,
-	interpolateRainbow
+	scaleThreshold
 	
 } = d3;
 
@@ -72,34 +72,41 @@ const height = 500 - margin.top - margin.bottom,
 				const minMass = min(myData, d => d.properties.mass);
 				
 				
+				const color = scaleThreshold()
+								.domain([1000, 1100, 1200,1300, 1400,1500, 1600, 1700, 1800, 1900, 1950, 2000])
+								.range(['red', 'white', 'blue', 'yellow', 'green', 'pink','brown','grey', 'purple', 'darkorange', 'wheat', '#54278f']);		
+				
+				
 				console.log('min max mass', minMass, maxMass);
 				
-				const sizes = scaleLinear()
-								.domain([minMass, maxMass])
-								.range([2,40]);				
+				const sizeDef = d3.range(1,16);
+				console.log([2,3,4,5,6,7,8,9,0,10,11,12,13,14,15,16]);
 				
-				const maxYear = max(myData, d => d.properties.year);
-				const minYear = min(myData, d => d.properties.year);
+				const sizes = d3.scaleQuantize()
+								//.domain([minMass, maxMass])
+								.domain([minMass, maxMass])
+								.range([2,3,4,5,6,7,8,9,0,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,28,29]);				
 				
 				g.selectAll('circle')
 					.data(myData)
 					.enter()
 						.append('circle')
 						.attr('cx', d=> projection([d.properties.reclong, d.properties.reclat])[0])
-						.attr('cy', d=> projection([d.properties.reclong, d.properties.reclat])[1])	
+						.attr('cy', d=> projection([d.properties.reclong, d.properties.reclat])[1])
+						.attr('stroke', 'black')
 						.attr('r', d=> {
 								console.log( 'sizes', sizes(d.properties.mass), d.properties.mass);
-								return 5;
+								return sizes(d.properties.mass);
 							})
-						.style('fill', (d)=> interpolateRainbow(d.properties.year/(maxYear-minYear)))
-						.style('opacity', 0.6);				
+						.style('fill', d =>color(d.properties.year))
+						.style('opacity', 0.3);			
 			
 			});		
 
 		
 	const zooming = zoom()
 		.on("zoom", () => {
-			console.log(d3.event.transform);
+			//console.log(d3.event.transform);
 			g.attr('transform', 
 				   `translate( ${d3.event.transform.x} , ${ d3.event.transform.y} )scale(${ d3.event.transform.k })`);
 				
