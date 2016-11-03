@@ -20,7 +20,7 @@ const {
 
 
 const url = "https://raw.githubusercontent.com/FreeCodeCamp/ProjectReferenceData/master/meteorite-strike-data.json";
-const urlMap = "https://raw.githubusercontent.com/mbostock/topojson/master/examples/world-50m.json";
+const urlMap = "https://s3.amazonaws.com/rogatis/world-50m.json";
 	
 	const projection = geoMercator()
 				.center([0, 0])
