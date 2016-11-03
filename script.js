@@ -1,8 +1,6 @@
 // JavaScript Document
 /*jshint esversion: 6 */
 
-
-
 const { 
 	json,
 	select,
@@ -21,38 +19,65 @@ const {
 } = d3;
 
 
-
 const url = "https://raw.githubusercontent.com/FreeCodeCamp/ProjectReferenceData/master/meteorite-strike-data.json";
 const urlMap = "https://raw.githubusercontent.com/mbostock/topojson/master/examples/world-50m.json";
-
-const margin = { top: 0, right: 0, bottom: 0, left:0 };
-
-const height = 500 - margin.top - margin.bottom,
-  	  width = 900 - margin.left - margin.right;
 	
 	const projection = geoMercator()
 				.center([0, 0])
 				.scale(100)
-				.rotate([-180,0]);
+				.rotate([0,0]);
+
+	const divResp = select('body')
+						.append('div')
+						.attr('class','svg-container');
+
+	const svg =divResp
+				.append("svg")
+				  //responsive SVG needs these 2 attributes and no width and height attr
+   				.attr("preserveAspectRatio", "xMinYMin meet")
+   				.attr("viewBox", "0 0 800 600")
+   				//class to make it responsiv
+   				.attr('class', "svg-content-responsive")
+				.style('background-color', 'darkblue');
+
+
 	
-	const svg = select("body").append("svg")
-		.attr("width", width)
-		.attr("height", height);
+	const tooltip = select('body').append('div')
+            .style('position', 'absolute')
+            .style('padding', '0 10px')
+            .style('background', 'black')
+		    .style('color', 'white')
+            .style('opacity', 0);
+
+	const toolText = (d)  =>{
+			const text = `<div id= toolTip>
+			   	<p> fall: <strong> ${d.properties.fall}  </strong> <br>
+				   	mass: <strong> ${d.properties.mass}  </strong> <br>
+				   	name: <strong> ${d.properties.name}  </strong> <br>
+				   	nametype: <strong> ${d.properties.nametype}  </strong> <br>
+				   	recclass: <strong> ${d.properties.recclass}  </strong> <br>
+				   	reclat: <strong> ${d.properties.reclat}  </strong> <br>
+				   	year: <strong> ${d.properties.year}  </strong> <br></p>
+			  	</div>`;
+
+		return text;
 		
+	};
+
 	const path = geoPath()
 		.projection(projection);
 		
 	const g = svg.append("g");
 	
 	// load and display the World
-	d3.json(urlMap, (error, topology) => {		
+	json(urlMap, (error, topology) => {
 			g.selectAll("path")
 				.data(topojson.object(topology, topology.objects.countries).geometries)
 				.enter()
 				.append("path")
 				.attr("d", path);
 		
-			d3.json(url, (error, json) =>{
+			json(url, (error, json) =>{
 			
 				const myData = json.features;
 						
@@ -61,31 +86,23 @@ const height = 500 - margin.top - margin.bottom,
 				
 				const toTime = timeParse("%Y-%m-%dT%H:%M:%S.%L");
 											
-				myData.map((d,i) =>{
+				myData.map(d =>{
 					let newTime = toTime(d.properties.year);
 						newTime = timeFormat('%Y')(newTime);
 						d.properties.year = newTime;
 					});
-	
-				
-				const maxMass = max(myData, d => d.properties.mass);
-				const minMass = min(myData, d => d.properties.mass);
-				
+
 				
 				const color = scaleThreshold()
 								.domain([1000, 1100, 1200,1300, 1400,1500, 1600, 1700, 1800, 1900, 1950, 2000])
-								.range(['red', 'white', 'blue', 'yellow', 'green', 'pink','brown','grey', 'purple', 'darkorange', 'wheat', '#54278f']);		
+								.range(['red', 'white', 'blue', 'yellow', 'green', 'pink','brown','grey', 'purple', 'darkorange', 'wheat', '#54278f']);
 				
-				
-				console.log('min max mass', minMass, maxMass);
-				
-				const sizeDef = d3.range(1,16);
-				console.log([2,3,4,5,6,7,8,9,0,10,11,12,13,14,15,16]);
-				
-				const sizes = d3.scaleQuantize()
-								//.domain([minMass, maxMass])
-								.domain([minMass, maxMass])
-								.range([2,3,4,5,6,7,8,9,0,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,28,29]);				
+				const sizes = scaleThreshold()
+								.domain([10000,100000,1000000,10000000])
+								.range([1,6,12,20]);
+
+
+
 				
 				g.selectAll('circle')
 					.data(myData)
@@ -94,21 +111,43 @@ const height = 500 - margin.top - margin.bottom,
 						.attr('cx', d=> projection([d.properties.reclong, d.properties.reclat])[0])
 						.attr('cy', d=> projection([d.properties.reclong, d.properties.reclat])[1])
 						.attr('stroke', 'black')
-						.attr('r', d=> {
-								console.log( 'sizes', sizes(d.properties.mass), d.properties.mass);
-								return sizes(d.properties.mass);
-							})
+						.attr('r', d=>  sizes(d.properties.mass))
+						.attr('id', (d,i) => i)
 						.style('fill', d =>color(d.properties.year))
-						.style('opacity', 0.3);			
+						.style('opacity', 0.3)
+						.on('mouseover', (d)=> {
+							select(`#${d.id}`)
+									.style('cursor', 'pointer');
+								tooltip.transition()
+									.style('opacity', 0.8);
+
+								tooltip.html(toolText(d))
+									.style('left', (d3.event.pageX + 100) + 'px')
+									.style('top',  (d3.event.pageY + 30) + 'px');
+								})
+						.on('mouseout', (d)=>{
+								tooltip.style('opacity', 0);
+			   					select(`#${d.id}`)
+									.style('cursor', 'default');
+								 });
 			
 			});		
 
 		
+		const clampScale = (e) =>{
+			const scale = max([e.transform.k,1]);
+			e.transform.k = scale;
+			console.log('tranform',e.transform,'newScale', scale);
+			return e.transform.k;
+		};
+
+
 	const zooming = zoom()
 		.on("zoom", () => {
-			//console.log(d3.event.transform);
+			console.log(d3.event);
 			g.attr('transform', 
-				   `translate( ${d3.event.transform.x} , ${ d3.event.transform.y} )scale(${ d3.event.transform.k })`);
+				    //`translate(${t})scale( ${d3.event.scale} )`);
+				   `translate( ${d3.event.transform.x} , ${ d3.event.transform.y} )scale(${ clampScale(d3.event) })`);
 				
 			g.selectAll("path")
 				.attr('d',path.projection(projection));
@@ -116,11 +155,7 @@ const height = 500 - margin.top - margin.bottom,
 			
 		});
 	
-	svg.call(zooming);	
-		
-	
-	
-	
+	svg.call(zooming);
 	
 					
 });
